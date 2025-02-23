@@ -68,20 +68,20 @@ class Player():
 		if game_over == 0:
 			#get keypresses
 			key = pygame.key.get_pressed()
-			if key[pygame.K_SPACE] and self.jumped == False and self.in_air == False:
+			if key[pygame.K_w] and self.jumped == False and self.in_air == False:
 				self.vel_y = -15
 				self.jumped = True
-			if key[pygame.K_SPACE] == False:
+			if key[pygame.K_w] == False:
 				self.jumped = False
-			if key[pygame.K_LEFT]:
+			if key[pygame.K_a]:
 				dx -= 5
 				self.counter += 1
 				self.direction = -1
-			if key[pygame.K_RIGHT]:
+			if key[pygame.K_d]:
 				dx += 5
 				self.counter += 1
 				self.direction = 1
-			if key[pygame.K_LEFT] == False and key[pygame.K_RIGHT] == False:
+			if key[pygame.K_a] == False and key[pygame.K_d] == False:
 				self.counter = 0
 				self.index = 0
 				if self.direction == 1:
@@ -128,7 +128,7 @@ class Player():
 
 
 			#check for collision with enemies
-			if pygame.sprite.spritecollide(self, blob_group, False):
+			if pygame.sprite.spritecollide(self, knight_group, False):
 				game_over = -1
 
 			#check for collision with lava
@@ -204,8 +204,8 @@ class World():
 					tile = (img, img_rect)
 					self.tile_list.append(tile)
 				if tile == 3:
-					blob = Enemy(col_count * tile_size, row_count * tile_size + 15)
-					blob_group.add(blob)
+					knight = Enemy(col_count * tile_size, row_count * tile_size + 15)
+					knight_group.add(knight)
 				if tile == 6:
 					lava = Lava(col_count * tile_size, row_count * tile_size + (tile_size // 2))
 					lava_group.add(lava)
@@ -223,7 +223,7 @@ class World():
 class Enemy(pygame.sprite.Sprite):
 	def __init__(self, x, y):
 		pygame.sprite.Sprite.__init__(self)
-		self.image = pygame.image.load('img/blob.png')
+		self.image = pygame.image.load('img/enemy.png')
 		self.rect = self.image.get_rect()
 		self.rect.x = x
 		self.rect.y = y
@@ -277,7 +277,7 @@ world_data = [
 
 player = Player(100, screen_height - 130)
 
-blob_group = pygame.sprite.Group()
+knight_group = pygame.sprite.Group()
 lava_group = pygame.sprite.Group()
 
 world = World(world_data)
@@ -296,9 +296,9 @@ while run:
 	world.draw()
 
 	if game_over == 0:
-		blob_group.update()
+		knight_group.update()
 	
-	blob_group.draw(screen)
+	knight_group.draw(screen)
 	lava_group.draw(screen)
 
 	game_over = player.update(game_over)
