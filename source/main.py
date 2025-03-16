@@ -41,7 +41,6 @@ restart_img = pygame.image.load('img/restart_buton.png')
 start_img = pygame.image.load('img/start_buton.png')
 exit_img = pygame.image.load('img/exit_buton.png')
 
-
 def draw_text(text, font, text_col, x, y):
 	img = font.render(text, True, text_col)
 	screen.blit(img, (x, y))
@@ -364,7 +363,7 @@ while run:
 			#update score
 			#check if a coin has been collected
 			if pygame.sprite.spritecollide(player, coin_group, True):
-				score += 1
+				score += 500
 			draw_text('X ' + str(score), font_score, white, tile_size - 10, 10)
 		
 		knight_group.draw(screen)
