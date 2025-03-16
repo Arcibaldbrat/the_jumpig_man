@@ -6,7 +6,7 @@ from os import path
 pygame.init()
 
 clock = pygame.time.Clock()
-fps = 60
+fps = 100
 
 screen_width = 1000
 screen_height = 1000
