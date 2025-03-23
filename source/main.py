@@ -32,6 +32,8 @@ score = 0
 #define colours
 white = (255, 255, 255)
 blue = (0, 0, 255)
+green = (0, 255, 0)
+red = (255, 0, 0)
 
 
 #load images
@@ -52,6 +54,7 @@ def reset_level(level):
 	knight_group.empty()
 	lava_group.empty()
 	exit_group.empty()
+	powerup_group.empty()
 
 	#load in level data and create world
 	if path.exists(f'level{level}_data'):
@@ -107,16 +110,28 @@ class Player():
 			#get keypresses
 			key = pygame.key.get_pressed()
 			if key[pygame.K_w] and self.jumped == False and self.in_air == False:
-				self.vel_y = -15
+				# Zvýšený skok s jump-boostem
+				if self.jump_boost_active:
+					self.vel_y = -20  # Silnější skok
+				else:
+					self.vel_y = -15  # Normální skok
 				self.jumped = True
 			if key[pygame.K_w] == False:
 				self.jumped = False
 			if key[pygame.K_a]:
-				dx -= 5
+				# Zvýšená rychlost se speed-boostem
+				if self.speed_boost_active:
+					dx -= 8  # Rychlejší pohyb doleva
+				else:
+					dx -= 5  # Normální pohyb doleva
 				self.counter += 1
 				self.direction = -1
 			if key[pygame.K_d]:
-				dx += 5
+				# Zvýšená rychlost se speed-boostem
+				if self.speed_boost_active:
+					dx += 8  # Rychlejší pohyb doprava
+				else:
+					dx += 5  # Normální pohyb doprava
 				self.counter += 1
 				self.direction = 1
 			if key[pygame.K_a] == False and key[pygame.K_d] == False:
@@ -177,6 +192,26 @@ class Player():
 			if pygame.sprite.spritecollide(self, exit_group, False):
 				game_over = 1
 
+			# Kontrola kolize s power-upy
+			powerup_hit = pygame.sprite.spritecollide(self, powerup_group, True)
+			for powerup in powerup_hit:
+				if powerup.type == "jump":
+					self.jump_boost_active = True
+					self.jump_boost_timer = pygame.time.get_ticks()
+				elif powerup.type == "speed":
+					self.speed_boost_active = True
+					self.speed_boost_timer = pygame.time.get_ticks()
+
+			# Aktualizace časovačů pro power-upy
+			current_time = pygame.time.get_ticks()
+			
+			# Jump boost trvá 5 sekund
+			if self.jump_boost_active and current_time - self.jump_boost_timer > 5000:
+				self.jump_boost_active = False
+			
+			# Speed boost trvá 5 sekund
+			if self.speed_boost_active and current_time - self.speed_boost_timer > 5000:
+				self.speed_boost_active = False
 
 			#update player coordinates
 			self.rect.x += dx
@@ -192,6 +227,12 @@ class Player():
 		#draw player onto screen
 		screen.blit(self.image, self.rect)
 		pygame.draw.rect(screen, (255, 255, 255), self.rect, 2)
+		
+		# Zobrazení indikátorů aktivních power-upů
+		if self.jump_boost_active:
+			pygame.draw.circle(screen, green, (self.rect.centerx - 15, self.rect.top - 10), 5)
+		if self.speed_boost_active:
+			pygame.draw.circle(screen, red, (self.rect.centerx + 15, self.rect.top - 10), 5)
 
 		return game_over
 
@@ -218,7 +259,11 @@ class Player():
 		self.jumped = False
 		self.direction = 0
 		self.in_air = True
-
+		# Přidání proměnných pro power-upy
+		self.jump_boost_active = False
+		self.jump_boost_timer = 0
+		self.speed_boost_active = False
+		self.speed_boost_timer = 0
 
 
 class World():
@@ -259,6 +304,14 @@ class World():
 				if tile == 8:
 					exit = Exit(col_count * tile_size, row_count * tile_size - (tile_size // 2))
 					exit_group.add(exit)
+				# Nový typ dlaždice: 9 pro jump-boost
+				if tile == 9:
+					powerup = PowerUp(col_count * tile_size + (tile_size // 2), row_count * tile_size + (tile_size // 2), "jump")
+					powerup_group.add(powerup)
+				# Nový typ dlaždice: 10 pro speed-boost
+				if tile == 10:
+					powerup = PowerUp(col_count * tile_size + (tile_size // 2), row_count * tile_size + (tile_size // 2), "speed")
+					powerup_group.add(powerup)
 				col_count += 1
 			row_count += 1
 
@@ -268,6 +321,26 @@ class World():
 			screen.blit(tile[0], tile[1])
 			pygame.draw.rect(screen, (255, 255, 255), tile[1], 2)
 
+
+# Nová třída pro power-upy
+class PowerUp(pygame.sprite.Sprite):
+	def __init__(self, x, y, type):
+		pygame.sprite.Sprite.__init__(self)
+		self.type = type
+		
+		# Vytvoření jednoduchých grafik pro power-upy
+		self.image = pygame.Surface((tile_size // 2, tile_size // 2))
+		if type == "jump":
+			self.image.fill(green)  # Jump-boost je zelený
+		elif type == "speed":
+			self.image.fill(red)    # Speed-boost je červený
+			
+		self.rect = self.image.get_rect()
+		self.rect.center = (x, y)
+		
+	def update(self):
+		# Animace power-upů - pohupování nahoru a dolů
+		self.rect.y += pygame.math.Vector2(0, 0.5).rotate(pygame.time.get_ticks() / 10 % 360).y
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -324,6 +397,8 @@ knight_group = pygame.sprite.Group()
 lava_group = pygame.sprite.Group()
 coin_group = pygame.sprite.Group()
 exit_group = pygame.sprite.Group()
+# Nová skupina pro power-upy
+powerup_group = pygame.sprite.Group()
 
 #create dummy coin for showing the score
 score_coin = Coin(tile_size // 2, tile_size // 2)
@@ -335,6 +410,12 @@ if path.exists(f'level{level}_data'):
 	world_data = pickle.load(pickle_in)
 world = World(world_data)
 
+# Manuální přidání několika power-upů (pro testování)
+# Přidejte tyto řádky, pokud chcete ihned testovat power-upy bez úpravy level dat
+powerup1 = PowerUp(300, screen_height - 150, "jump")
+powerup2 = PowerUp(600, screen_height - 150, "speed")
+powerup_group.add(powerup1)
+powerup_group.add(powerup2)
 
 #create buttons
 restart_button = Button(screen_width // 2 - 50, screen_height // 2 + 100, restart_img)
@@ -360,16 +441,25 @@ while run:
 
 		if game_over == 0:
 			knight_group.update()
+			powerup_group.update()  # Aktualizace power-upů
+			
 			#update score
 			#check if a coin has been collected
 			if pygame.sprite.spritecollide(player, coin_group, True):
 				score += 500
 			draw_text('X ' + str(score), font_score, white, tile_size - 10, 10)
+			
+			# Zobrazení statusu power-upů
+			if player.jump_boost_active:
+				draw_text('JUMP BOOST', font_score, green, tile_size - 10, 50)
+			if player.speed_boost_active:
+				draw_text('SPEED BOOST', font_score, red, tile_size - 10, 90)
 		
 		knight_group.draw(screen)
 		lava_group.draw(screen)
 		coin_group.draw(screen)
 		exit_group.draw(screen)
+		powerup_group.draw(screen)  # Vykreslení power-upů
 
 		game_over = player.update(game_over)
 
